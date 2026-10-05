@@ -1,85 +1,51 @@
-import { useState, useEffect } from 'react'
+import { Download, Menu, Moon, Sun, Wifi, WifiOff } from 'lucide-react'
 
 interface HeaderProps {
-  currentPage: string
-  onPageChange: (page: 'dashboard' | 'compose' | 'comments' | 'analytics' | 'settings') => void
+  isDark: boolean
+  isNavigationOpen: boolean
+  onToggleNavigation: () => void
+  onToggleTheme: () => void
+  isOnline: boolean
+  canInstall: boolean
+  onInstall: () => void
 }
 
-export function Header({ currentPage, onPageChange }: HeaderProps) {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    // Check for saved theme preference or default to light mode
-    const savedTheme = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true)
-      document.documentElement.setAttribute('data-theme', 'dark')
-    } else {
-      setIsDark(false)
-      document.documentElement.setAttribute('data-theme', 'light')
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = !isDark
-    setIsDark(newTheme)
-    
-    if (newTheme) {
-      document.documentElement.setAttribute('data-theme', 'dark')
-      localStorage.setItem('theme', 'dark')
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light')
-      localStorage.setItem('theme', 'light')
-    }
-  }
-
-  const navItems = [
-    { id: 'dashboard' as const, label: 'Dashboard' },
-    { id: 'compose' as const, label: 'Compose' },
-    { id: 'comments' as const, label: 'Comments' },
-    { id: 'analytics' as const, label: 'Analytics' },
-    { id: 'settings' as const, label: 'Settings' },
-  ]
-
+export function Header({ isDark, isNavigationOpen, onToggleNavigation, onToggleTheme, isOnline, canInstall, onInstall }: HeaderProps) {
   return (
-    <header className="header">
-      <div className="header-container">
-        <div className="header-brand">
-          <div className="header-logo">
-            O
-          </div>
-          <h1 className="header-title">
-            OmniChat
-          </h1>
+    <header className="topbar">
+      <div className="topbar-inner">
+        <button
+          className="icon-button mobile-menu-button"
+          type="button"
+          aria-label={isNavigationOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isNavigationOpen}
+          aria-controls="primary-navigation"
+          onClick={onToggleNavigation}
+        >
+          <Menu size={20} aria-hidden="true" />
+        </button>
+
+        <a className="topbar-brand" href="#dashboard" aria-label="OmniChat dashboard">
+          <span className="brand-mark" aria-hidden="true">O</span>
+          <span>OmniChat</span>
+        </a>
+
+        <div className="topbar-actions">
+          <span className={`connection-state ${isOnline ? '' : 'is-offline'}`} title={isOnline ? 'Changes save on this device' : 'Offline · changes save on this device'}>
+            {isOnline ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}
+            <span>{isOnline ? 'Local mode' : 'Offline'}</span>
+          </span>
+          {canInstall && <button className="button button-secondary install-button" type="button" onClick={onInstall}><Download size={14} aria-hidden="true" />Install app</button>}
+          <button
+            className="icon-button"
+            type="button"
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            onClick={onToggleTheme}
+          >
+            {isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+          </button>
         </div>
-        
-        <nav className="header-nav">
-          <div className="nav-links">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => onPageChange(item.id)}
-                className={`nav-button ${currentPage === item.id ? 'active' : ''}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          
-          <div className="header-actions">
-            <button
-              onClick={toggleTheme}
-              className="theme-button"
-            >
-              {isDark ? '🌞' : '🌙'}
-            </button>
-            <button className="upgrade-button">
-              Upgrade Pro
-            </button>
-          </div>
-        </nav>
       </div>
     </header>
   )

@@ -1,197 +1,67 @@
-import { useState } from 'react'
-import { mockComments, socialPlatforms } from '../data/mockData'
+import { useMemo, useState, type FormEvent } from 'react'
+import { MessageCircle, Search } from 'lucide-react'
+import { PlatformMark } from '../components/platform/PlatformMark'
+import { type Comment } from '../data/mockData'
 import { formatDate } from '../lib/utils'
 
-export function CommentsView() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedPlatform, setSelectedPlatform] = useState<string>('all')
-  
-  const filteredComments = mockComments.filter(comment => {
-    const matchesSearch = comment.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         comment.author.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesPlatform = selectedPlatform === 'all' || comment.platform === selectedPlatform
-    return matchesSearch && matchesPlatform
-  })
+interface CommentsViewProps {
+  comments: Comment[]
+  onReply: (commentId: string, reply: string) => void
+}
 
-  const getPlatformStats = () => {
-    const stats = mockComments.reduce((acc, comment) => {
-      acc[comment.platform] = (acc[comment.platform] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-    return stats
+export function CommentsView({ comments, onReply }: CommentsViewProps) {
+  const [query, setQuery] = useState('')
+  const [activeId, setActiveId] = useState('')
+  const [replyText, setReplyText] = useState('')
+  const pending = comments.filter(comment => comment.status === 'pending').length
+  const drafted = comments.filter(comment => comment.status === 'replied').length
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return comments.filter(comment => !normalized || `${comment.author} ${comment.content}`.toLowerCase().includes(normalized))
+  }, [comments, query])
+  const selected = filtered.find(comment => comment.id === activeId) ?? filtered[0]
+
+  const saveReply = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selected || !replyText.trim()) return
+    onReply(selected.id, replyText.trim())
+    setReplyText('')
   }
-
-  const platformStats = getPlatformStats()
 
   return (
     <div className="comments-page">
-      <div className="comments-container">
-        {/* Header */}
-        <div className="comments-header">
-          <div>
-            <h1 className="comments-title">
-              <span className="title-icon">💬</span>
-              Comments & Mentions
-            </h1>
-            <p className="comments-subtitle">
-              Monitor and respond to comments across all your social platforms
-            </p>
-          </div>
-          <button className="analytics-btn">
-            📊 Analytics
-          </button>
-        </div>
+      <header className="page-heading">
+        <div className="page-heading-copy"><p className="eyebrow">Community</p><h1>Comment inbox</h1><p>Comments will appear here after platform APIs are configured. Replies saved here remain drafts in this browser.</p></div>
+        <span className="status-pill disconnected">API setup later</span>
+      </header>
 
-        {/* Search and Filters */}
-        <div className="comments-filters">
-          <div className="search-section">
-            <input
-              type="text"
-              placeholder="Search comments or authors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          <div className="platform-filters">
-            <button
-              className={`filter-btn ${selectedPlatform === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedPlatform('all')}
-            >
-              All Platforms ({mockComments.length})
-            </button>
-            {socialPlatforms
-              .filter(platform => platformStats[platform.id])
-              .map((platform) => (
-                <button
-                  key={platform.id}
-                  className={`filter-btn ${selectedPlatform === platform.id ? 'active' : ''}`}
-                  onClick={() => setSelectedPlatform(platform.id)}
-                >
-                  {platform.icon} {platform.name} ({platformStats[platform.id] || 0})
-                </button>
-              ))}
-          </div>
-        </div>
+      <section className="metric-grid comment-metrics" aria-label="Local comment overview">
+        <Metric label="Comments available" value={comments.length} />
+        <Metric label="Need a reply" value={pending} />
+        <Metric label="Local reply drafts" value={drafted} />
+      </section>
 
-        {/* Comment Stats */}
-        <div className="stats-grid">
-          <div className="stat-card glass">
-            <div className="stat-icon">📊</div>
-            <div className="stat-content">
-              <h3>Total Comments</h3>
-              <div className="stat-value">{mockComments.length}</div>
-              <div className="stat-change positive">+8 today</div>
-            </div>
-          </div>
-          
-          <div className="stat-card glass">
-            <div className="stat-icon">⏳</div>
-            <div className="stat-content">
-              <h3>Pending Replies</h3>
-              <div className="stat-value">3</div>
-              <div className="stat-change warning">Needs attention</div>
-            </div>
-          </div>
-          
-          <div className="stat-card glass">
-            <div className="stat-icon">📈</div>
-            <div className="stat-content">
-              <h3>Response Rate</h3>
-              <div className="stat-value">94%</div>
-              <div className="stat-change positive">Above average</div>
-            </div>
-          </div>
-          
-          <div className="stat-card glass">
-            <div className="stat-icon">⚡</div>
-            <div className="stat-content">
-              <h3>Avg Response Time</h3>
-              <div className="stat-value">2.4h</div>
-              <div className="stat-change positive">Excellent</div>
-            </div>
-          </div>
+      <section className="panel inbox-panel" aria-label="Comment inbox">
+        <div className="inbox-toolbar">
+          <label className="search-field"><Search size={17} aria-hidden="true" /><span className="sr-only">Search comments</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search comments or authors..." /></label>
         </div>
-
-        {/* Comments List */}
-        <div className="comments-list-card glass">
-          <h3>Recent Comments</h3>
-          <div className="comments-list">
-            {filteredComments.length === 0 ? (
-              <div className="no-comments">
-                <div className="no-comments-icon">🔍</div>
-                <p>No comments found matching your filters.</p>
-                <span>Try adjusting your search terms or platform filters</span>
-              </div>
-            ) : (
-              filteredComments.map((comment) => {
-                const platform = socialPlatforms.find(p => p.id === comment.platform)
-                return (
-                  <div key={comment.id} className="comment-item">
-                    <div className="comment-avatar">
-                      {comment.avatar}
-                    </div>
-                    
-                    <div className="comment-content">
-                      <div className="comment-header">
-                        <span className="comment-author">{comment.author}</span>
-                        {platform && (
-                          <span className={`platform-badge ${comment.platform}`}>
-                            {platform.icon} {platform.name}
-                          </span>
-                        )}
-                        <span className="comment-time">
-                          {formatDate(comment.createdAt)}
-                        </span>
-                      </div>
-                      
-                      <p className="comment-text">{comment.content}</p>
-                      
-                      <div className="comment-actions">
-                        <div className="comment-stats">
-                          <span className="like-count">❤️ {comment.likes}</span>
-                        </div>
-                        <div className="action-buttons">
-                          <button className="action-btn">💬 Reply</button>
-                          <button className="action-btn">❤️ Like</button>
-                          <button className="action-btn">🔄 Share</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            )}
+        {filtered.length === 0 ? (
+          <div className="comments-offline-empty"><span className="empty-icon"><MessageCircle size={22} aria-hidden="true" /></span><h2>{comments.length ? 'No comments match your search' : 'Comment sync is waiting for API access'}</h2><p>{comments.length ? 'Try a different name or phrase.' : 'The inbox is ready. Add platform credentials later to sync real comments. This app does not invent engagement or pretend a reply was sent.'}</p><a href="#settings" className="button button-secondary button-small">See platform requirements</a></div>
+        ) : (
+          <div className="comments-workspace">
+            <div className="comments-list" aria-label="Available comments">
+              {filtered.map(comment => <button className={`comments-list-item ${selected?.id === comment.id ? 'is-active' : ''}`} key={comment.id} type="button" onClick={() => { setActiveId(comment.id); setReplyText('') }}>
+                <span className="comment-initial">{comment.author.slice(0, 1)}</span><span><strong>{comment.author}</strong><small>{comment.content}</small><span className="comment-local-meta"><PlatformMark platformId={comment.platform} />{formatDate(comment.createdAt)} · {comment.status === 'replied' ? 'Local draft saved' : 'Needs reply'}</span></span>
+              </button>)}
+            </div>
+            {selected && <article className="comment-local-detail"><div className="panel-header"><div><h2>{selected.author}</h2><span className="panel-subtitle"><PlatformMark platformId={selected.platform} /> · {formatDate(selected.createdAt)}</span></div></div><blockquote>{selected.content}</blockquote>{selected.reply && <div className="saved-reply"><strong>Saved locally · not sent</strong><p>{selected.reply}</p></div>}<form className="reply-form" onSubmit={saveReply}><label className="field-label" htmlFor="reply-draft">Save a reply draft</label><textarea id="reply-draft" className="field-control reply-textarea" value={replyText} onChange={event => setReplyText(event.target.value)} placeholder="Write a reply to keep with this comment..." /><div className="reply-form-footer"><span>Sending requires an approved platform connection.</span><button type="submit" className="button button-primary" disabled={!replyText.trim()}>Save draft</button></div></form></article>}
           </div>
-          
-          {filteredComments.length > 0 && (
-            <div className="load-more-section">
-              <button className="load-more-btn">
-                Load More Comments
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Quick Reply Templates */}
-        <div className="templates-card glass">
-          <h3>Quick Reply Templates</h3>
-          <div className="templates-grid">
-            <div className="template-item">
-              <h4>Thank You</h4>
-              <p>"Thank you for your feedback! We really appreciate it. 🙏"</p>
-            </div>
-            <div className="template-item">
-              <h4>More Info</h4>
-              <p>"We'd love to help! Please send us a DM with more details."</p>
-            </div>
-            <div className="template-item">
-              <h4>Follow Up</h4>
-              <p>"Thanks for reaching out! We'll get back to you soon. 📧"</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        )}
+      </section>
     </div>
   )
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div className="metric-card"><div className="metric-card-copy"><span className="metric-label">{label}</span><strong className="metric-value">{value}</strong></div><span className="metric-icon"><MessageCircle size={18} aria-hidden="true" /></span></div>
 }

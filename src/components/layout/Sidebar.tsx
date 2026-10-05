@@ -1,71 +1,55 @@
-import { socialPlatforms } from '../../data/mockData'
-import { formatNumber } from '../../lib/utils'
+import { BarChart3, LayoutDashboard, MessageCircle, PenSquare, Settings, Smartphone } from 'lucide-react'
 
-export function Sidebar() {
+export type PageId = 'dashboard' | 'compose' | 'comments' | 'whatsapp' | 'analytics' | 'settings'
+
+interface SidebarProps {
+  currentPage: PageId
+  isOpen: boolean
+  onNavigate: () => void
+}
+
+const navItems = [
+  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'compose', label: 'Compose', Icon: PenSquare },
+  { id: 'comments', label: 'Comments', Icon: MessageCircle },
+  { id: 'whatsapp', label: 'WhatsApp', Icon: Smartphone },
+  { id: 'analytics', label: 'Analytics', Icon: BarChart3 },
+  { id: 'settings', label: 'Settings', Icon: Settings },
+] as const
+
+export function Sidebar({ currentPage, isOpen, onNavigate, displayName }: SidebarProps & { displayName: string }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-content">
-        {/* Connected Platforms */}
-        <div className="sidebar-card">
-          <h3>Connected Platforms</h3>
-          <div className="platform-list">
-            {socialPlatforms.map((platform) => (
-              <div key={platform.id} className="platform-item">
-                <div className="platform-info">
-                  <span className="platform-icon">{platform.icon}</span>
-                  <div className="platform-details">
-                    <p>{platform.name}</p>
-                    <p className="platform-followers">
-                      {formatNumber(platform.followers || 0)} followers
-                    </p>
-                  </div>
-                </div>
-                <div className={`status-badge ${platform.connected ? 'connected' : 'disconnected'}`}>
-                  {platform.connected ? "✓" : "○"}
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className="connect-button">
-            + Connect Platform
-          </button>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="sidebar-card">
-          <h3>Quick Stats</h3>
-          <div className="stats-list">
-            <div className="stat-row">
-              <span>Total Posts</span>
-              <span>124</span>
-            </div>
-            <div className="stat-row">
-              <span>Total Engagement</span>
-              <span>8.2K</span>
-            </div>
-            <div className="stat-row">
-              <span>This Month</span>
-              <span>+24%</span>
-            </div>
+    <>
+      <button
+        className={`mobile-scrim ${isOpen ? 'is-open' : ''}`}
+        type="button"
+        aria-label="Close navigation"
+        tabIndex={isOpen ? 0 : -1}
+        onClick={onNavigate}
+      />
+      <aside className={`sidebar ${isOpen ? 'is-open' : ''}`}>
+        <nav className="sidebar-nav" id="primary-navigation" aria-label="Primary navigation">
+          {navItems.map(({ id, label, Icon }) => (
+            <a
+              key={id}
+              className="sidebar-link"
+              href={`#${id}`}
+              aria-current={currentPage === id ? 'page' : undefined}
+              onClick={onNavigate}
+            >
+              <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+              <span>{label}</span>
+            </a>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <span className="demo-avatar" aria-hidden="true">{displayName.slice(0, 2).toUpperCase() || 'YN'}</span>
+          <div className="sidebar-footer-copy">
+            <strong>{displayName || 'Your Name'}</strong>
+            <span>Local workspace</span>
           </div>
         </div>
-
-        {/* Recent Activity */}
-        <div className="sidebar-card">
-          <h3>Recent Activity</h3>
-          <div className="activity-list">
-            <div className="activity-item">
-              📝 New post published to 3 platforms
-            </div>
-            <div className="activity-item">
-              💬 5 new comments received
-            </div>
-            <div className="activity-item">
-              📈 Engagement up 15% today
-            </div>
-          </div>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }
